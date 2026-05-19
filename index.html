@@ -1,0 +1,679 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>YMOYL Journey</title>
+<style>
+  :root {
+    --bg: #fafaf7; --fg: #1a1a1a; --muted: #6b6b6b;
+    --card: #ffffff; --border: #e5e5e0;
+    --accent: #2d5a3f; --accent-soft: #e8f0eb;
+    --warn: #b45309; --warn-soft: #fef3e2;
+    --done: #166534; --done-soft: #dcfce7;
+    --block: #991b1b; --block-soft: #fee2e2;
+    --hl: #6366f1; --hl-soft: #eef2ff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16161a; --fg: #f0f0ec; --muted: #9a9a96;
+      --card: #1f1f24; --border: #2a2a30;
+      --accent: #6ba888; --accent-soft: #1e2e25;
+      --warn: #f59e0b; --warn-soft: #2a1f0a;
+      --done: #4ade80; --done-soft: #0f2a18;
+      --block: #f87171; --block-soft: #2a0e0e;
+      --hl: #a5b4fc; --hl-soft: #1e1b4b;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Inter", system-ui, sans-serif;
+    background: var(--bg); color: var(--fg); line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 24px 20px 80px; }
+
+  header.topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 16px; margin-bottom: 24px;
+  }
+  header.topbar .brand {
+    font-weight: 700; font-size: 18px; letter-spacing: -.01em;
+  }
+  header.topbar .brand .dim { color: var(--muted); font-weight: 500; }
+  header.topbar .ctrls { display: flex; gap: 8px; }
+  .iconbtn {
+    background: var(--card); border: 1px solid var(--border); color: var(--fg);
+    border-radius: 8px; padding: 6px 12px; font-size: 14px; cursor: pointer;
+    font-family: inherit;
+  }
+  .iconbtn:hover { background: var(--accent-soft); }
+
+  /* Hero */
+  .hero {
+    background: linear-gradient(135deg, var(--accent) 0%, color-mix(in srgb, var(--accent) 70%, #000) 100%);
+    color: #fff; padding: 36px 28px; border-radius: 16px; margin-bottom: 24px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.08), 0 8px 24px rgba(0,0,0,.06);
+  }
+  .hero .label { font-size: 12px; text-transform: uppercase; letter-spacing: .12em; opacity: .8; }
+  .hero .number {
+    font-size: 64px; line-height: 1; font-weight: 700; letter-spacing: -.03em; margin: 8px 0;
+  }
+  .hero .number .unit { font-size: 24px; opacity: .8; font-weight: 500; }
+  .hero .sub { opacity: .85; font-size: 15px; max-width: 600px; }
+  .hero .sub .strong { color: #fff; font-weight: 600; }
+  .hero.empty .number { color: rgba(255,255,255,.5); }
+
+  /* 4 FIs roadmap */
+  .fis {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+    margin-bottom: 24px;
+  }
+  .fi-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px; position: relative; cursor: pointer;
+    transition: transform .12s, border-color .12s;
+  }
+  .fi-card:hover { transform: translateY(-1px); border-color: var(--accent); }
+  .fi-card .roman {
+    display: inline-block; width: 32px; height: 32px; line-height: 32px; text-align: center;
+    background: var(--accent-soft); color: var(--accent); border-radius: 50%;
+    font-weight: 700; font-size: 14px; margin-bottom: 8px;
+  }
+  .fi-card.done .roman { background: var(--done-soft); color: var(--done); }
+  .fi-card.active .roman { background: var(--accent); color: #fff; }
+  .fi-card.locked { opacity: .55; }
+  .fi-card h3 { margin: 0 0 4px; font-size: 15px; font-weight: 600; }
+  .fi-card .desc { font-size: 12px; color: var(--muted); line-height: 1.4; }
+  .fi-card .progress {
+    height: 4px; background: var(--border); border-radius: 2px; margin-top: 10px; overflow: hidden;
+  }
+  .fi-card .progress > div {
+    height: 100%; background: var(--accent); transition: width .3s;
+  }
+  .fi-card.done .progress > div { background: var(--done); }
+  @media (max-width: 720px) { .fis { grid-template-columns: 1fr 1fr; } }
+
+  /* Cards grid */
+  .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 16px; }
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 20px 22px;
+  }
+  .card h2 {
+    margin: 0 0 14px; font-size: 12px; text-transform: uppercase; letter-spacing: .08em;
+    color: var(--muted); font-weight: 600;
+  }
+  .span-12 { grid-column: span 12; }
+  .span-8 { grid-column: span 8; }
+  .span-6 { grid-column: span 6; }
+  .span-4 { grid-column: span 4; }
+  @media (max-width: 820px) {
+    .span-8, .span-6, .span-4 { grid-column: span 12; }
+  }
+
+  /* Stat list */
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .stat .k { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+  .stat .v { font-size: 22px; font-weight: 600; letter-spacing: -.02em; margin-top: 2px; }
+  .stat .vsub { font-size: 12px; color: var(--muted); }
+
+  /* Top-cat list */
+  .catlist { display: flex; flex-direction: column; gap: 6px; }
+  .catrow {
+    display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center;
+    padding: 6px 8px; border-radius: 6px;
+  }
+  .catrow:hover { background: var(--accent-soft); }
+  .catrow .name { font-size: 14px; }
+  .catrow .bar {
+    grid-column: 1 / -1; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden;
+    margin-top: -2px;
+  }
+  .catrow .bar > div { height: 100%; background: var(--accent); }
+  .catrow .v { font-size: 13px; font-weight: 600; }
+  .catrow .pct { font-size: 11px; color: var(--muted); width: 38px; text-align: right; }
+
+  /* Anomaly list */
+  .anomlist .a {
+    padding: 8px 12px; background: var(--warn-soft); border-left: 3px solid var(--warn);
+    border-radius: 6px; margin-bottom: 6px; font-size: 13px;
+  }
+  .anomlist .a strong { color: var(--warn); }
+
+  /* What-if panel */
+  .whatif label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; margin-top: 12px; }
+  .whatif select, .whatif input[type=number] {
+    background: var(--bg); color: var(--fg); border: 1px solid var(--border);
+    border-radius: 6px; padding: 6px 10px; font-size: 14px; font-family: inherit;
+    width: 100%;
+  }
+  .whatif .slider-row { display: flex; align-items: center; gap: 12px; }
+  .whatif input[type=range] { flex: 1; }
+  .whatif .result {
+    background: var(--accent-soft); border-radius: 8px; padding: 12px;
+    margin-top: 16px;
+  }
+  .whatif .result .delta {
+    font-size: 18px; font-weight: 700; color: var(--accent);
+  }
+  .whatif .result .sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+  /* Settings panel */
+  .panel-bg {
+    position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 90;
+    display: none;
+  }
+  .panel-bg.open { display: block; }
+  .panel {
+    position: fixed; top: 0; right: 0; bottom: 0; width: 360px; max-width: 90vw;
+    background: var(--bg); border-left: 1px solid var(--border);
+    box-shadow: -4px 0 16px rgba(0,0,0,.1); z-index: 100;
+    transform: translateX(100%); transition: transform .2s;
+    padding: 24px; overflow-y: auto;
+  }
+  .panel.open { transform: translateX(0); }
+  .panel h2 { margin: 0 0 16px; font-size: 18px; }
+  .panel .field { margin-bottom: 16px; }
+  .panel .field label {
+    display: block; font-size: 12px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px;
+  }
+  .panel .field input, .panel .field select {
+    width: 100%; padding: 8px 12px; border: 1px solid var(--border);
+    border-radius: 8px; font-size: 14px; font-family: inherit;
+    background: var(--card); color: var(--fg);
+  }
+  .panel .seg {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 4px;
+    background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+    padding: 3px;
+  }
+  .panel .seg button {
+    background: transparent; border: 0; padding: 8px; font-size: 13px;
+    border-radius: 6px; cursor: pointer; color: var(--fg); font-family: inherit;
+  }
+  .panel .seg button.active { background: var(--accent); color: #fff; }
+  .panel .closebtn {
+    position: absolute; top: 16px; right: 16px;
+    background: transparent; border: 0; font-size: 24px; color: var(--muted); cursor: pointer;
+  }
+  .panel .save {
+    width: 100%; background: var(--accent); color: #fff; border: 0;
+    padding: 12px; border-radius: 8px; font-size: 14px; font-weight: 600;
+    cursor: pointer; font-family: inherit; margin-top: 12px;
+  }
+  .panel .hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+  /* Resume card */
+  .resume-card a {
+    display: block; padding: 10px 12px; margin: 4px 0;
+    color: var(--fg); text-decoration: none;
+    border: 1px solid var(--border); border-radius: 8px; font-size: 14px;
+    transition: background .12s;
+  }
+  .resume-card a:hover { background: var(--accent-soft); }
+  .resume-card a code { font-size: 12px; color: var(--muted); }
+
+  /* Footer */
+  footer {
+    text-align: center; color: var(--muted); font-size: 12px; margin-top: 32px;
+    padding-top: 16px; border-top: 1px solid var(--border);
+  }
+  footer code { background: var(--card); padding: 2px 6px; border-radius: 4px; }
+
+  /* SVG chart */
+  svg.wall { width: 100%; height: 280px; }
+  svg.wall .grid-line { stroke: var(--border); stroke-width: 1; }
+  svg.wall .axis { stroke: var(--muted); stroke-width: 1; }
+  svg.wall .axis-label { fill: var(--muted); font-size: 10px; }
+  svg.wall .income { stroke: var(--accent); stroke-width: 2; fill: none; }
+  svg.wall .expense { stroke: var(--warn); stroke-width: 2; fill: none; }
+  svg.wall .income-dot { fill: var(--accent); }
+  svg.wall .expense-dot { fill: var(--warn); }
+  .chart-legend { display: flex; gap: 16px; margin-bottom: 8px; font-size: 12px; }
+  .chart-legend span::before { content: "■"; margin-right: 6px; }
+  .chart-legend .inc::before { color: var(--accent); }
+  .chart-legend .exp::before { color: var(--warn); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="topbar">
+    <div class="brand">YMOYL Journey <span class="dim" id="profileLabel">· Amin</span></div>
+    <div class="ctrls">
+      <button class="iconbtn" id="unitToggle" title="Switch unit">$</button>
+      <button class="iconbtn" id="openSettings" title="Settings">⚙ Settings</button>
+    </div>
+  </header>
+
+  <!-- HERO: years until crossover -->
+  <section class="hero empty" id="hero">
+    <div class="label">Years until financial independence</div>
+    <div class="number" id="heroNumber">?<span class="unit"></span></div>
+    <div class="sub" id="heroSub">
+      Open <strong class="strong">Settings</strong> and enter your <strong class="strong">real hourly wage</strong>, <strong class="strong">monthly savings</strong>, and <strong class="strong">current invested net worth</strong> — the projection cone appears here.
+    </div>
+  </section>
+
+  <!-- 4 FIs roadmap -->
+  <div class="fis" id="fis"></div>
+
+  <div class="grid">
+
+    <!-- Numbers card -->
+    <section class="card span-4">
+      <h2>Your numbers · Jan 2021 – Sep 2025</h2>
+      <div class="stats">
+        <div class="stat"><div class="k">Income</div><div class="v" data-money="420071">$420K</div><div class="vsub">classified</div></div>
+        <div class="stat"><div class="k">Expense</div><div class="v" data-money="152921">$153K</div><div class="vsub">avg <span data-money="2683" data-style="short">$2.7K</span>/mo</div></div>
+        <div class="stat"><div class="k">Transfers</div><div class="v" data-money="734527">$735K</div><div class="vsub">CC + Wealthsimple + RBC</div></div>
+        <div class="stat"><div class="k">Net saved (proxy)</div><div class="v" data-money="267150">$267K</div><div class="vsub">income − expense</div></div>
+      </div>
+    </section>
+
+    <!-- Wall chart -->
+    <section class="card span-8">
+      <h2>Wall chart · monthly income vs. expense</h2>
+      <div class="chart-legend">
+        <span class="inc">Income</span>
+        <span class="exp">Expense</span>
+      </div>
+      <svg class="wall" id="wallChart" viewBox="0 0 800 280" preserveAspectRatio="none"></svg>
+    </section>
+
+    <!-- Top categories -->
+    <section class="card span-6">
+      <h2>Top spending categories (5-year totals)</h2>
+      <div class="catlist" id="catlist"></div>
+    </section>
+
+    <!-- What-if -->
+    <section class="card span-6 whatif">
+      <h2>What if? · scenario sandbox</h2>
+      <label>Cut this category…</label>
+      <select id="whatifCat"></select>
+      <label>…by this much</label>
+      <div class="slider-row">
+        <input type="range" id="whatifPct" min="0" max="100" value="30" step="5">
+        <span id="whatifPctLabel" style="min-width:50px;text-align:right;font-weight:600;">30%</span>
+      </div>
+      <div class="result">
+        <div>Reclaimed: <span class="delta" id="whatifReclaim">$0 / yr</span></div>
+        <div class="sub" id="whatifSub">Set real hourly wage in Settings to see this in hours of life energy</div>
+        <div class="sub" id="whatifFi" style="margin-top:6px;"></div>
+      </div>
+    </section>
+
+    <!-- Anomalies -->
+    <section class="card span-6">
+      <h2>Anomalies to investigate</h2>
+      <div class="anomlist" id="anomlist"></div>
+    </section>
+
+    <!-- Resume card -->
+    <section class="card span-6 resume-card">
+      <h2>Resume · workbook + reports</h2>
+      <a href="file:///Users/amin/Documents/Finance/YMOYL/YMOYL_Workbook.xlsx">Open the workbook<br><code>~/Documents/Finance/YMOYL/YMOYL_Workbook.xlsx</code></a>
+      <a href="file:///Users/amin/Documents/Finance/YMOYL/03_Real_Hourly_Wage.md">Step 2A — Real Hourly Wage instructions<br><code>03_Real_Hourly_Wage.md</code></a>
+      <a href="file:///Users/amin/Documents/Finance/YMOYL/02_Net_Worth.md">Step 1B — Net Worth instructions<br><code>02_Net_Worth.md</code></a>
+    </section>
+
+  </div>
+
+  <footer>
+    Generated 2026-05-19 · data window Jan 2021 – Sep 2025 ·
+    profile: <code id="footerProfile">amin</code> ·
+    <span id="urlHint">share link: append <code>?p=yourname</code> to start your own</span>
+  </footer>
+</div>
+
+<!-- Settings panel -->
+<div class="panel-bg" id="panelBg"></div>
+<aside class="panel" id="panel">
+  <button class="closebtn" id="closeSettings">×</button>
+  <h2>Settings</h2>
+
+  <div class="field">
+    <label>Profile name</label>
+    <input id="profileInput" type="text" placeholder="amin">
+    <div class="hint">Each profile has its own saved values. Add <code>?p=NAME</code> to the URL to share.</div>
+  </div>
+
+  <div class="field">
+    <label>Display unit</label>
+    <div class="seg" id="unitSeg">
+      <button data-v="dollars" class="active">Dollars</button>
+      <button data-v="hours">Hours of life energy</button>
+    </div>
+    <div class="hint">Hours = dollars ÷ real hourly wage (set below). This is the YMOYL move.</div>
+  </div>
+
+  <div class="field">
+    <label>FIRE flavor</label>
+    <select id="fireFlavor">
+      <option value="lean">Lean FIRE · 25× lean expenses</option>
+      <option value="regular" selected>Regular FIRE · 25× current expenses</option>
+      <option value="fat">Fat FIRE · 25× fat expenses</option>
+      <option value="coast">Coast FIRE · let compounding do the rest</option>
+      <option value="barista">Barista FIRE · 12.5× (half FI + part-time)</option>
+    </select>
+  </div>
+
+  <div class="field">
+    <label>Real hourly wage ($/hr)</label>
+    <input id="realWage" type="number" min="0" step="0.5" placeholder="e.g. 22.50">
+    <div class="hint">From tab 2A of the workbook. Drives hours-of-life-energy.</div>
+  </div>
+
+  <div class="field">
+    <label>Current annual spending ($)</label>
+    <input id="annSpend" type="number" min="0" step="100" placeholder="e.g. 32000">
+    <div class="hint">Default uses your CIBC-classified avg × 12. Override here.</div>
+  </div>
+
+  <div class="field">
+    <label>Monthly savings going to investments ($)</label>
+    <input id="monthlySave" type="number" min="0" step="50" placeholder="e.g. 1500">
+  </div>
+
+  <div class="field">
+    <label>Current invested net worth ($)</label>
+    <input id="netWorth" type="number" min="0" step="500" placeholder="e.g. 25000">
+  </div>
+
+  <div class="field">
+    <label>Expected real return (%)</label>
+    <input id="realReturn" type="number" min="0" step="0.5" value="7">
+  </div>
+
+  <button class="save" id="saveSettings">Save</button>
+</aside>
+
+<script>
+/* ─── Embedded data ─────────────────────────────────────────────── */
+const DATA = {"generated": "2026-05-19", "leaf_cats": ["Rent / Mortgage", "Utilities / Internet / Phone", "Home & Office Improvement", "Groceries", "Restaurants & Take-out", "Coffee & Snacks", "Public Transit", "Gas & Fuel", "Auto Insurance (ICBC)", "Auto Maintenance", "Rideshare / Taxi / Parking", "Pharmacy / Drug Store", "Medical / Dental", "Gym / Fitness", "Personal Care / Clothing", "CFA / Professional Education", "Books / Courses / Subscriptions (work)", "Subscriptions (entertainment)", "Hobbies / Sports", "Events / Outings / Travel", "Bank Service Charges", "Credit Card Interest", "Loan Service (RBC)", "Cash Withdrawals", "Foreign Currency Purchases", "Misc / Uncategorized"], "cat_totals": {"Groceries": 33242.08, "Misc / Uncategorized": 31687.05, "Loan Service (RBC)": 10772.52, "Restaurants & Take-out": 10238.87, "Public Transit": 10223.11, "CFA / Professional Education": 10168.1, "Auto Insurance (ICBC)": 6922.75, "Utilities / Internet / Phone": 6413.51, "Pharmacy / Drug Store": 5537.95, "Cash Withdrawals": 4720.0, "Personal Care / Clothing": 4502.12, "Foreign Currency Purchases": 3762.16, "Events / Outings / Travel": 3265.6, "Subscriptions (entertainment)": 2617.32, "Gas & Fuel": 2364.85, "Auto Maintenance": 1479.49, "Medical / Dental": 1263.29, "Rideshare / Taxi / Parking": 1211.01, "Coffee & Snacks": 1034.2, "Home & Office Improvement": 880.94, "Bank Service Charges": 450.25, "Gym / Fitness": 123.15, "Credit Card Interest": 40.25, "Rent / Mortgage": 0.0, "Books / Courses / Subscriptions (work)": 0.0, "Hobbies / Sports": 0.0}, "year_totals": {"2021": {"income": 57949.42, "expense": 21343.46, "transfer": 1657.42}, "2022": {"income": 71576.56, "expense": 25796.61, "transfer": 49888.72}, "2023": {"income": 92638.11, "expense": 35275.83, "transfer": 130816.13}, "2024": {"income": 130517.51, "expense": 28890.43, "transfer": 266836.55}, "2025": {"income": 67389.05, "expense": 41614.24, "transfer": 285327.78}}, "totals": {"income": 420070.65, "expense": 152920.57, "transfers": 734526.6, "n_months": 57, "avg_monthly_expense": 2682.82, "avg_monthly_income": 7369.66, "net_saved_proxy": 267150.08}, "income_hint": {"2021": {"t4_like": 24161.66, "self_emp": 0, "gov": 0, "other": 33787.76, "total": 57949.42}, "2022": {"t4_like": 30469.31, "self_emp": 0, "gov": 0, "other": 41107.25, "total": 71576.56}, "2023": {"t4_like": 23028.73, "self_emp": 91.72, "gov": 0, "other": 69517.66, "total": 92638.11}, "2024": {"t4_like": 13301.22, "self_emp": 49531.87, "gov": 0, "other": 67684.42, "total": 130517.51}, "2025": {"t4_like": 0, "self_emp": 42642.62, "gov": 114.55, "other": 24631.88, "total": 67389.05}}, "anomalies": [{"month": "2023-07", "misc": 10424, "reason": "Misc=$10424 vs median $159"}, {"month": "2025-01", "misc": 2874, "reason": "Misc=$2874 vs median $159"}, {"month": "2021-06", "misc": 2340, "reason": "Misc=$2340 vs median $159"}, {"month": "2025-02", "misc": 1664, "reason": "Misc=$1664 vs median $159"}, {"month": "2024-06", "misc": 1565, "reason": "Misc=$1565 vs median $159"}], "trend": [{"label": "2021-01", "income": 5464.96, "expense": 1472.1, "diff": 3992.86}, {"label": "2021-02", "income": 4766.6, "expense": 1135.46, "diff": 3631.14}, {"label": "2021-03", "income": 3826.65, "expense": 1884.22, "diff": 1942.43}, {"label": "2021-04", "income": 2769.93, "expense": 821.53, "diff": 1948.4}, {"label": "2021-05", "income": 1714.79, "expense": 1346.66, "diff": 368.13}, {"label": "2021-06", "income": 6454.74, "expense": 3166.28, "diff": 3288.46}, {"label": "2021-07", "income": 3258.33, "expense": 934.27, "diff": 2324.06}, {"label": "2021-08", "income": 2768.49, "expense": 1623.74, "diff": 1144.75}, {"label": "2021-09", "income": 13224.15, "expense": 4608.78, "diff": 8615.37}, {"label": "2021-10", "income": 3544.08, "expense": 1456.06, "diff": 2088.02}, {"label": "2021-11", "income": 4314.22, "expense": 889.06, "diff": 3425.16}, {"label": "2021-12", "income": 5842.48, "expense": 2005.3, "diff": 3837.18}, {"label": "2022-01", "income": 10350.97, "expense": 1078.49, "diff": 9272.48}, {"label": "2022-02", "income": 5706.55, "expense": 2456.94, "diff": 3249.61}, {"label": "2022-03", "income": 5482.94, "expense": 2263.05, "diff": 3219.89}, {"label": "2022-04", "income": 7252.97, "expense": 4428.89, "diff": 2824.08}, {"label": "2022-05", "income": 6298.42, "expense": 1636.57, "diff": 4661.85}, {"label": "2022-06", "income": 10358.44, "expense": 1581.51, "diff": 8776.93}, {"label": "2022-07", "income": 4907.22, "expense": 3115.52, "diff": 1791.7}, {"label": "2022-08", "income": 4404.66, "expense": 1595.46, "diff": 2809.2}, {"label": "2022-09", "income": 2993.25, "expense": 2690.74, "diff": 302.51}, {"label": "2022-10", "income": 4790.04, "expense": 1810.85, "diff": 2979.19}, {"label": "2022-11", "income": 4919.02, "expense": 1253.44, "diff": 3665.58}, {"label": "2022-12", "income": 4112.08, "expense": 1885.15, "diff": 2226.93}, {"label": "2023-01", "income": 4467.59, "expense": 1496.08, "diff": 2971.51}, {"label": "2023-02", "income": 3868.61, "expense": 1100.72, "diff": 2767.89}, {"label": "2023-03", "income": 3250.21, "expense": 1424.06, "diff": 1826.15}, {"label": "2023-04", "income": 3115.27, "expense": 1712.24, "diff": 1403.03}, {"label": "2023-05", "income": 14632, "expense": 1444.61, "diff": 13187.39}, {"label": "2023-06", "income": 3163.91, "expense": 3773.72, "diff": -609.81}, {"label": "2023-07", "income": 22536.86, "expense": 12127.5, "diff": 10409.36}, {"label": "2023-08", "income": 16778.09, "expense": 1522.27, "diff": 15255.82}, {"label": "2023-09", "income": 7344.55, "expense": 2076.14, "diff": 5268.41}, {"label": "2023-10", "income": 4791.36, "expense": 1591.9, "diff": 3199.46}, {"label": "2023-11", "income": 4410.24, "expense": 3825.83, "diff": 584.41}, {"label": "2023-12", "income": 4279.42, "expense": 3180.76, "diff": 1098.66}, {"label": "2024-01", "income": 8036.05, "expense": 1407.8, "diff": 6628.25}, {"label": "2024-02", "income": 3824.19, "expense": 2948.47, "diff": 875.72}, {"label": "2024-03", "income": 4567.78, "expense": 1304.47, "diff": 3263.31}, {"label": "2024-04", "income": 7929.71, "expense": 2122.87, "diff": 5806.84}, {"label": "2024-05", "income": 5745.37, "expense": 2966.31, "diff": 2779.06}, {"label": "2024-06", "income": 3514, "expense": 3579.7, "diff": -65.7}, {"label": "2024-07", "income": 3573.35, "expense": 1868.36, "diff": 1704.99}, {"label": "2024-08", "income": 2000, "expense": 1113.63, "diff": 886.37}, {"label": "2024-09", "income": 2726.5, "expense": 1523.9, "diff": 1202.6}, {"label": "2024-10", "income": 12023.69, "expense": 2731.49, "diff": 9292.2}, {"label": "2024-11", "income": 50895.65, "expense": 4062.43, "diff": 46833.22}, {"label": "2024-12", "income": 25681.22, "expense": 3261.0, "diff": 22420.22}, {"label": "2025-01", "income": 7985.62, "expense": 7824.56, "diff": 161.06}, {"label": "2025-02", "income": 4609.34, "expense": 6026.21, "diff": -1416.87}, {"label": "2025-03", "income": 16878.96, "expense": 3066.71, "diff": 13812.25}, {"label": "2025-04", "income": 9305.42, "expense": 3322.71, "diff": 5982.71}, {"label": "2025-05", "income": 4848.7, "expense": 3901.15, "diff": 947.55}, {"label": "2025-06", "income": 4931.86, "expense": 5662.42, "diff": -730.56}, {"label": "2025-07", "income": 5432, "expense": 5747.14, "diff": -315.14}, {"label": "2025-08", "income": 5421.97, "expense": 4239.05, "diff": 1182.92}, {"label": "2025-09", "income": 7975.18, "expense": 1824.29, "diff": 6150.89}]};
+
+/* ─── Profile + storage ─────────────────────────────────────────── */
+const params = new URLSearchParams(location.search);
+const PROFILE = (params.get('p') || 'amin').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
+const KEY = (k) => `ymoyl.${PROFILE}.${k}`;
+const load = (k, def) => { try { const v = localStorage.getItem(KEY(k)); return v == null ? def : JSON.parse(v); } catch { return def; } };
+const save = (k, v) => localStorage.setItem(KEY(k), JSON.stringify(v));
+
+/* defaults */
+const cfg = {
+  unit: load('unit', 'dollars'),
+  flavor: load('flavor', 'regular'),
+  realWage: load('realWage', null),
+  annSpend: load('annSpend', null),
+  monthlySave: load('monthlySave', null),
+  netWorth: load('netWorth', null),
+  realReturn: load('realReturn', 7),
+};
+
+document.getElementById('profileLabel').textContent = '· ' + PROFILE.replace(/^./, c => c.toUpperCase());
+document.getElementById('footerProfile').textContent = PROFILE;
+
+/* ─── Helpers ───────────────────────────────────────────────────── */
+const fmtUSD = (n, short=false) => {
+  if (n == null || isNaN(n)) return '—';
+  const abs = Math.abs(n);
+  if (short && abs >= 1000) return '$' + (n/1000).toFixed(abs >= 100000 ? 0 : 1) + 'K';
+  if (abs >= 1e6) return '$' + (n/1e6).toFixed(2) + 'M';
+  return '$' + Math.round(n).toLocaleString();
+};
+const fmtHrs = (h) => {
+  if (h == null || isNaN(h)) return '—';
+  if (h >= 1000) return Math.round(h).toLocaleString() + ' hrs';
+  if (h >= 100) return Math.round(h) + ' hrs';
+  return h.toFixed(1) + ' hrs';
+};
+const display = (dollars, short=false) => {
+  if (cfg.unit === 'hours' && cfg.realWage > 0) return fmtHrs(dollars / cfg.realWage);
+  return fmtUSD(dollars, short);
+};
+
+/* ─── 4 FIs roadmap ─────────────────────────────────────────────── */
+const fis = [
+  { roman: 'I',   title: 'Financial Intelligence', desc: 'Know what you earn, spend, own & owe', steps: ['1A','1B','2A','2B','3'], color: 'accent' },
+  { roman: 'II',  title: 'Financial Integrity',    desc: 'Align spending with your values',       steps: ['4'], color: 'accent' },
+  { roman: 'III', title: 'Financial Independence', desc: 'Crossover · investment income ≥ expenses', steps: ['5','6','7','8'], color: 'accent' },
+  { roman: 'IV',  title: 'Financial Freedom',      desc: 'Life energy in service of your values',  steps: ['9'], color: 'accent' },
+];
+function renderFIs() {
+  const completed = load('completed', []);
+  document.getElementById('fis').innerHTML = fis.map((f, i) => {
+    const myDone = f.steps.filter(s => completed.includes(s)).length;
+    const total = f.steps.length;
+    const ratio = total ? myDone / total : 0;
+    const state = myDone === total ? 'done' : (myDone > 0 ? 'active' : '');
+    const locked = i > 0 && fis[i-1].steps.some(s => !completed.includes(s)) ? 'locked' : '';
+    return `<div class="fi-card ${state} ${locked}">
+      <div class="roman">${f.roman}</div>
+      <h3>${f.title}</h3>
+      <div class="desc">${f.desc}</div>
+      <div class="progress"><div style="width:${Math.round(ratio*100)}%"></div></div>
+    </div>`;
+  }).join('');
+}
+
+/* ─── Top categories ────────────────────────────────────────────── */
+function renderCats() {
+  const cats = Object.entries(DATA.cat_totals).slice(0, 8);
+  const max = cats[0]?.[1] || 1;
+  const cl = document.getElementById('catlist');
+  cl.innerHTML = cats.map(([name, v]) => {
+    const pct = Math.round(v / max * 100);
+    return `<div class="catrow">
+      <div class="name">${name}</div>
+      <div class="v">${display(v, true)}</div>
+      <div class="pct">${pct}%</div>
+      <div class="bar"><div style="width:${pct}%"></div></div>
+    </div>`;
+  }).join('');
+}
+
+/* ─── Stats card ────────────────────────────────────────────────── */
+function renderStats() {
+  document.querySelectorAll('[data-money]').forEach(el => {
+    const v = parseFloat(el.dataset.money);
+    const short = el.dataset.style === 'short';
+    el.textContent = display(v, true);
+  });
+}
+
+/* ─── Wall chart ────────────────────────────────────────────────── */
+function renderChart() {
+  const t = DATA.trend;
+  const W = 800, H = 280, P = 30;
+  const xs = (i) => P + (i / (t.length - 1)) * (W - 2*P);
+  const maxV = Math.max(...t.flatMap(p => [p.income, p.expense])) * 1.1;
+  const ys = (v) => H - P - (v / maxV) * (H - 2*P);
+  const path = (key) => 'M ' + t.map((p, i) => `${xs(i)},${ys(p[key])}`).join(' L ');
+  // Grid
+  let grid = '';
+  for (let i = 0; i <= 4; i++) {
+    const y = P + i * (H - 2*P) / 4;
+    grid += `<line class="grid-line" x1="${P}" y1="${y}" x2="${W-P}" y2="${y}"/>`;
+    const val = (maxV * (1 - i/4));
+    grid += `<text class="axis-label" x="${P-4}" y="${y+4}" text-anchor="end">${fmtUSD(val,true)}</text>`;
+  }
+  // X labels (every 12 months)
+  let xlabels = '';
+  for (let i = 0; i < t.length; i += 12) {
+    xlabels += `<text class="axis-label" x="${xs(i)}" y="${H-P+14}" text-anchor="middle">${t[i].label}</text>`;
+  }
+  document.getElementById('wallChart').innerHTML =
+    grid +
+    `<path class="income" d="${path('income')}"/>` +
+    `<path class="expense" d="${path('expense')}"/>` +
+    xlabels;
+}
+
+/* ─── Anomalies ─────────────────────────────────────────────────── */
+function renderAnoms() {
+  document.getElementById('anomlist').innerHTML = DATA.anomalies.map(a =>
+    `<div class="a"><strong>${a.month}</strong>: Misc / Uncategorized = ${display(a.misc, true)} <br>
+     <span style="color:var(--muted);font-size:12px;">${a.reason}</span></div>`
+  ).join('');
+}
+
+/* ─── What-if scenario ──────────────────────────────────────────── */
+function fillCatSelect() {
+  const sel = document.getElementById('whatifCat');
+  sel.innerHTML = Object.entries(DATA.cat_totals).slice(0, 12)
+    .map(([n, v]) => `<option value="${n}" data-v="${v}">${n} — ${display(v, true)}/5yr</option>`).join('');
+}
+function computeWhatif() {
+  const sel = document.getElementById('whatifCat');
+  const opt = sel.options[sel.selectedIndex];
+  const fiveYrTotal = parseFloat(opt.dataset.v);
+  const pct = parseFloat(document.getElementById('whatifPct').value);
+  document.getElementById('whatifPctLabel').textContent = pct + '%';
+  const annual = (fiveYrTotal / 5) * (pct / 100);
+  document.getElementById('whatifReclaim').textContent = display(annual) + ' / yr';
+  if (cfg.unit === 'hours' && cfg.realWage > 0) {
+    document.getElementById('whatifSub').textContent =
+      `= ${fmtUSD(annual)} / yr · ${(annual / cfg.realWage / 52).toFixed(1)} hrs/week`;
+  } else if (cfg.realWage > 0) {
+    document.getElementById('whatifSub').textContent =
+      `= ${fmtHrs(annual / cfg.realWage)} / yr of your life energy`;
+  } else {
+    document.getElementById('whatifSub').textContent = 'Set real hourly wage in Settings to see this in hours of life energy';
+  }
+  // Years to FI delta
+  const years = yearsToFI(0);
+  const yearsCut = yearsToFI(annual / 12);
+  const fiEl = document.getElementById('whatifFi');
+  if (years && yearsCut) {
+    fiEl.textContent = `Years to FI: ${years.toFixed(1)} → ${yearsCut.toFixed(1)} (-${(years - yearsCut).toFixed(1)})`;
+  } else {
+    fiEl.textContent = '';
+  }
+}
+
+/* ─── Years-to-FI calculation ───────────────────────────────────── */
+const flavors = {
+  lean: 25, regular: 25, fat: 25, coast: 25, barista: 12.5,
+};
+function fireTarget() {
+  const spend = cfg.annSpend || DATA.totals.avg_monthly_expense * 12;
+  const mul = flavors[cfg.flavor];
+  // Lean uses 0.6 of current spend, Fat uses 1.6
+  let adj = 1;
+  if (cfg.flavor === 'lean') adj = 0.6;
+  if (cfg.flavor === 'fat')  adj = 1.6;
+  return spend * adj * mul;
+}
+function yearsToFI(extraMonthlySave) {
+  if (!cfg.netWorth || !cfg.monthlySave) return null;
+  const target = fireTarget();
+  let nw = cfg.netWorth;
+  const r = (cfg.realReturn || 7) / 100;
+  const monthly = cfg.monthlySave + (extraMonthlySave || 0);
+  for (let y = 0; y < 80; y++) {
+    if (nw >= target) return y;
+    nw = nw * (1 + r) + monthly * 12;
+  }
+  return null;
+}
+
+/* ─── Hero ──────────────────────────────────────────────────────── */
+function renderHero() {
+  const hero = document.getElementById('hero');
+  const num = document.getElementById('heroNumber');
+  const sub = document.getElementById('heroSub');
+  const y = yearsToFI(0);
+  if (y == null) {
+    hero.classList.add('empty');
+    num.innerHTML = '?<span class="unit"></span>';
+    sub.innerHTML = `Open <strong class="strong">Settings</strong> and enter your <strong class="strong">monthly savings</strong> and <strong class="strong">current invested net worth</strong> — the projection appears here.`;
+    return;
+  }
+  hero.classList.remove('empty');
+  const target = fireTarget();
+  num.innerHTML = `${y.toFixed(1)}<span class="unit"> years</span>`;
+  const yearsLabel = cfg.flavor[0].toUpperCase() + cfg.flavor.slice(1);
+  sub.innerHTML = `${yearsLabel} FIRE target: <strong class="strong">${fmtUSD(target)}</strong>. Currently at <strong class="strong">${fmtUSD(cfg.netWorth)}</strong> (${Math.round(cfg.netWorth / target * 100)}%), adding <strong class="strong">${fmtUSD(cfg.monthlySave)}/mo</strong> at ${cfg.realReturn}% real return.`;
+}
+
+/* ─── Settings panel ────────────────────────────────────────────── */
+function openPanel() {
+  document.getElementById('panelBg').classList.add('open');
+  document.getElementById('panel').classList.add('open');
+  document.getElementById('profileInput').value = PROFILE;
+  document.getElementById('fireFlavor').value = cfg.flavor;
+  document.getElementById('realWage').value = cfg.realWage || '';
+  document.getElementById('annSpend').value = cfg.annSpend || '';
+  document.getElementById('monthlySave').value = cfg.monthlySave || '';
+  document.getElementById('netWorth').value = cfg.netWorth || '';
+  document.getElementById('realReturn').value = cfg.realReturn || 7;
+  document.querySelectorAll('#unitSeg button').forEach(b => b.classList.toggle('active', b.dataset.v === cfg.unit));
+}
+function closePanel() {
+  document.getElementById('panelBg').classList.remove('open');
+  document.getElementById('panel').classList.remove('open');
+}
+
+document.getElementById('openSettings').onclick = openPanel;
+document.getElementById('closeSettings').onclick = closePanel;
+document.getElementById('panelBg').onclick = closePanel;
+document.getElementById('unitToggle').onclick = () => {
+  cfg.unit = cfg.unit === 'dollars' ? 'hours' : 'dollars';
+  save('unit', cfg.unit);
+  document.getElementById('unitToggle').textContent = cfg.unit === 'dollars' ? '$' : 'hrs';
+  renderAll();
+};
+document.querySelectorAll('#unitSeg button').forEach(b => {
+  b.onclick = () => {
+    document.querySelectorAll('#unitSeg button').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    cfg.unit = b.dataset.v;
+  };
+});
+document.getElementById('saveSettings').onclick = () => {
+  const profileNew = document.getElementById('profileInput').value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
+  cfg.flavor = document.getElementById('fireFlavor').value;
+  cfg.realWage = parseFloat(document.getElementById('realWage').value) || null;
+  cfg.annSpend = parseFloat(document.getElementById('annSpend').value) || null;
+  cfg.monthlySave = parseFloat(document.getElementById('monthlySave').value) || null;
+  cfg.netWorth = parseFloat(document.getElementById('netWorth').value) || null;
+  cfg.realReturn = parseFloat(document.getElementById('realReturn').value) || 7;
+  save('unit', cfg.unit);
+  save('flavor', cfg.flavor);
+  save('realWage', cfg.realWage);
+  save('annSpend', cfg.annSpend);
+  save('monthlySave', cfg.monthlySave);
+  save('netWorth', cfg.netWorth);
+  save('realReturn', cfg.realReturn);
+  if (profileNew && profileNew !== PROFILE) {
+    const url = new URL(location.href);
+    url.searchParams.set('p', profileNew);
+    location.href = url.toString();
+    return;
+  }
+  closePanel();
+  renderAll();
+};
+document.getElementById('whatifPct').oninput = computeWhatif;
+document.getElementById('whatifCat').onchange = computeWhatif;
+
+/* ─── Render everything ─────────────────────────────────────────── */
+function renderAll() {
+  document.getElementById('unitToggle').textContent = cfg.unit === 'dollars' ? '$' : 'hrs';
+  renderFIs();
+  renderStats();
+  renderCats();
+  renderChart();
+  renderAnoms();
+  renderHero();
+  computeWhatif();
+}
+fillCatSelect();
+renderAll();
+
+</script>
+</body>
+</html>
