@@ -263,14 +263,9 @@
   <div class="grid">
 
     <!-- Numbers card -->
-    <section class="card span-4">
-      <h2>Your numbers · Jan 2021 – Sep 2025</h2>
-      <div class="stats">
-        <div class="stat"><div class="k">Income</div><div class="v" data-money="420071">$420K</div><div class="vsub">classified</div></div>
-        <div class="stat"><div class="k">Expense</div><div class="v" data-money="152921">$153K</div><div class="vsub">avg <span data-money="2683" data-style="short">$2.7K</span>/mo</div></div>
-        <div class="stat"><div class="k">Transfers</div><div class="v" data-money="734527">$735K</div><div class="vsub">CC + Wealthsimple + RBC</div></div>
-        <div class="stat"><div class="k">Net saved (proxy)</div><div class="v" data-money="267150">$267K</div><div class="vsub">income − expense</div></div>
-      </div>
+    <section class="card span-4" id="statsCard">
+      <h2 id="statsTitle">Your numbers · Jan 2021 – Sep 2025</h2>
+      <div class="stats" id="statsBody"></div>
     </section>
 
     <!-- Wall chart -->
@@ -342,6 +337,38 @@
   </div>
 
   <div class="field">
+    <label>Data source</label>
+    <div class="seg" id="dataModeSeg">
+      <button data-v="sample">Sample (Amin's 2021–2025)</button>
+      <button data-v="empty">Empty (I'll enter my own)</button>
+    </div>
+    <div class="hint">Sample loads 57 months of real CIBC + credit-card data. Empty hides the chart and starts you with a blank slate.</div>
+  </div>
+
+  <div class="field" id="overrideFields">
+    <label>Override headline numbers (optional)</label>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <div>
+        <input id="ovIncome" type="number" min="0" step="100" placeholder="Income">
+        <div class="hint" style="margin-top:2px;">Total income window</div>
+      </div>
+      <div>
+        <input id="ovExpense" type="number" min="0" step="100" placeholder="Expense">
+        <div class="hint" style="margin-top:2px;">Total expense window</div>
+      </div>
+      <div>
+        <input id="ovTransfers" type="number" min="0" step="100" placeholder="Transfers">
+        <div class="hint" style="margin-top:2px;">CC/savings/loan</div>
+      </div>
+      <div>
+        <input id="ovNetSaved" type="number" min="0" step="100" placeholder="Net saved">
+        <div class="hint" style="margin-top:2px;">Income − Expense</div>
+      </div>
+    </div>
+    <div class="hint" style="margin-top:6px;">Leave blank to use the sample values. Filled-in values override.</div>
+  </div>
+
+  <div class="field">
     <label>Display unit</label>
     <div class="seg" id="unitSeg">
       <button data-v="dollars" class="active">Dollars</button>
@@ -402,7 +429,8 @@ const KEY = (k) => `ymoyl.${PROFILE}.${k}`;
 const load = (k, def) => { try { const v = localStorage.getItem(KEY(k)); return v == null ? def : JSON.parse(v); } catch { return def; } };
 const save = (k, v) => localStorage.setItem(KEY(k), JSON.stringify(v));
 
-/* defaults */
+/* defaults — new profiles start empty, amin starts with the sample */
+const DEFAULT_MODE = (PROFILE === 'amin') ? 'sample' : 'empty';
 const cfg = {
   unit: load('unit', 'dollars'),
   flavor: load('flavor', 'regular'),
@@ -411,6 +439,18 @@ const cfg = {
   monthlySave: load('monthlySave', null),
   netWorth: load('netWorth', null),
   realReturn: load('realReturn', 7),
+  dataMode: load('dataMode', DEFAULT_MODE),
+  ovIncome: load('ovIncome', null),
+  ovExpense: load('ovExpense', null),
+  ovTransfers: load('ovTransfers', null),
+  ovNetSaved: load('ovNetSaved', null),
+};
+const isEmpty = () => cfg.dataMode === 'empty';
+const eff = (key, fallback) => {
+  const ov = cfg['ov' + key.charAt(0).toUpperCase() + key.slice(1)];
+  if (ov != null) return ov;
+  if (isEmpty()) return null;
+  return fallback;
 };
 
 document.getElementById('profileLabel').textContent = '· ' + PROFILE.replace(/^./, c => c.toUpperCase());
@@ -461,9 +501,13 @@ function renderFIs() {
 
 /* ─── Top categories ────────────────────────────────────────────── */
 function renderCats() {
+  const cl = document.getElementById('catlist');
+  if (isEmpty()) {
+    cl.innerHTML = `<div style="color:var(--muted);font-size:13px;padding:8px 0;">No historical category data yet. CSV import lands in v5. For now, use the what-if sandbox in manual mode or switch Data source to "Sample" in Settings to preview.</div>`;
+    return;
+  }
   const cats = Object.entries(DATA.cat_totals).slice(0, 8);
   const max = cats[0]?.[1] || 1;
-  const cl = document.getElementById('catlist');
   cl.innerHTML = cats.map(([name, v]) => {
     const pct = Math.round(v / max * 100);
     return `<div class="catrow">
@@ -477,22 +521,49 @@ function renderCats() {
 
 /* ─── Stats card ────────────────────────────────────────────────── */
 function renderStats() {
-  document.querySelectorAll('[data-money]').forEach(el => {
-    const v = parseFloat(el.dataset.money);
-    const short = el.dataset.style === 'short';
-    el.textContent = display(v, true);
-  });
+  const body = document.getElementById('statsBody');
+  const title = document.getElementById('statsTitle');
+  if (isEmpty() && cfg.ovIncome == null && cfg.ovExpense == null) {
+    title.textContent = 'Your numbers — fill them in';
+    body.innerHTML = `<div style="grid-column:1/-1;color:var(--muted);font-size:13px;line-height:1.6;">
+      No historical data loaded for profile <code>${PROFILE}</code>.<br><br>
+      Open <strong style="color:var(--fg);">⚙ Settings</strong> and either:<br>
+      • Set <em>Data source</em> to "Sample" to preview with Amin's 2021–2025 data, or<br>
+      • Fill the override fields with your own numbers.
+    </div>`;
+    return;
+  }
+  title.textContent = isEmpty() ? 'Your numbers (manual)' : 'Your numbers · Jan 2021 – Sep 2025';
+  const inc = eff('income', DATA.totals.income);
+  const exp = eff('expense', DATA.totals.expense);
+  const xfer = eff('transfers', DATA.totals.transfers);
+  const net = (cfg.ovNetSaved != null) ? cfg.ovNetSaved
+            : (inc != null && exp != null) ? (inc - exp) : null;
+  const avgMo = exp != null ? exp / (isEmpty() ? 12 : DATA.totals.n_months) : null;
+  const fmt = v => v == null ? '—' : display(v, true);
+  body.innerHTML = `
+    <div class="stat"><div class="k">Income</div><div class="v">${fmt(inc)}</div><div class="vsub">${cfg.ovIncome != null ? 'override' : (isEmpty() ? '—' : 'classified')}</div></div>
+    <div class="stat"><div class="k">Expense</div><div class="v">${fmt(exp)}</div><div class="vsub">${avgMo != null ? 'avg ' + fmt(avgMo) + '/mo' : '—'}</div></div>
+    <div class="stat"><div class="k">Transfers</div><div class="v">${fmt(xfer)}</div><div class="vsub">${cfg.ovTransfers != null ? 'override' : (isEmpty() ? '—' : 'CC + Wealthsimple + RBC')}</div></div>
+    <div class="stat"><div class="k">Net saved (proxy)</div><div class="v">${fmt(net)}</div><div class="vsub">${cfg.ovNetSaved != null ? 'override' : 'income − expense'}</div></div>
+  `;
 }
 
 /* ─── Wall chart ────────────────────────────────────────────────── */
 function renderChart() {
+  const svg = document.getElementById('wallChart');
+  if (isEmpty()) {
+    svg.innerHTML = `<text x="400" y="140" text-anchor="middle" class="axis-label" style="font-size:13px;fill:var(--muted);">
+      No monthly history for profile <tspan style="font-weight:600;fill:var(--fg);">${PROFILE}</tspan> · CSV import is on the v5 roadmap
+    </text>`;
+    return;
+  }
   const t = DATA.trend;
   const W = 800, H = 280, P = 30;
   const xs = (i) => P + (i / (t.length - 1)) * (W - 2*P);
   const maxV = Math.max(...t.flatMap(p => [p.income, p.expense])) * 1.1;
   const ys = (v) => H - P - (v / maxV) * (H - 2*P);
   const path = (key) => 'M ' + t.map((p, i) => `${xs(i)},${ys(p[key])}`).join(' L ');
-  // Grid
   let grid = '';
   for (let i = 0; i <= 4; i++) {
     const y = P + i * (H - 2*P) / 4;
@@ -500,12 +571,11 @@ function renderChart() {
     const val = (maxV * (1 - i/4));
     grid += `<text class="axis-label" x="${P-4}" y="${y+4}" text-anchor="end">${fmtUSD(val,true)}</text>`;
   }
-  // X labels (every 12 months)
   let xlabels = '';
   for (let i = 0; i < t.length; i += 12) {
     xlabels += `<text class="axis-label" x="${xs(i)}" y="${H-P+14}" text-anchor="middle">${t[i].label}</text>`;
   }
-  document.getElementById('wallChart').innerHTML =
+  svg.innerHTML =
     grid +
     `<path class="income" d="${path('income')}"/>` +
     `<path class="expense" d="${path('expense')}"/>` +
@@ -514,7 +584,12 @@ function renderChart() {
 
 /* ─── Anomalies ─────────────────────────────────────────────────── */
 function renderAnoms() {
-  document.getElementById('anomlist').innerHTML = DATA.anomalies.map(a =>
+  const list = document.getElementById('anomlist');
+  if (isEmpty()) {
+    list.innerHTML = `<div style="color:var(--muted);font-size:13px;padding:4px 0;">No anomalies — fill in your data first.</div>`;
+    return;
+  }
+  list.innerHTML = DATA.anomalies.map(a =>
     `<div class="a"><strong>${a.month}</strong>: Misc / Uncategorized = ${display(a.misc, true)} <br>
      <span style="color:var(--muted);font-size:12px;">${a.reason}</span></div>`
   ).join('');
@@ -559,9 +634,13 @@ const flavors = {
   lean: 25, regular: 25, fat: 25, coast: 25, barista: 12.5,
 };
 function fireTarget() {
-  const spend = cfg.annSpend || DATA.totals.avg_monthly_expense * 12;
+  // Prefer explicit annual spend; in sample mode fall back to historic avg; in empty mode require user input.
+  let spend = cfg.annSpend;
+  if (!spend) {
+    if (isEmpty()) return null;
+    spend = DATA.totals.avg_monthly_expense * 12;
+  }
   const mul = flavors[cfg.flavor];
-  // Lean uses 0.6 of current spend, Fat uses 1.6
   let adj = 1;
   if (cfg.flavor === 'lean') adj = 0.6;
   if (cfg.flavor === 'fat')  adj = 1.6;
@@ -570,6 +649,7 @@ function fireTarget() {
 function yearsToFI(extraMonthlySave) {
   if (!cfg.netWorth || !cfg.monthlySave) return null;
   const target = fireTarget();
+  if (!target) return null;
   let nw = cfg.netWorth;
   const r = (cfg.realReturn || 7) / 100;
   const monthly = cfg.monthlySave + (extraMonthlySave || 0);
@@ -589,7 +669,14 @@ function renderHero() {
   if (y == null) {
     hero.classList.add('empty');
     num.innerHTML = '?<span class="unit"></span>';
-    sub.innerHTML = `Open <strong class="strong">Settings</strong> and enter your <strong class="strong">monthly savings</strong> and <strong class="strong">current invested net worth</strong> — the projection appears here.`;
+    const needs = [];
+    if (!cfg.annSpend && isEmpty()) needs.push('current annual spending');
+    if (!cfg.monthlySave) needs.push('monthly savings');
+    if (!cfg.netWorth) needs.push('current invested net worth');
+    const list = needs.length
+      ? needs.map(n => `<strong class="strong">${n}</strong>`).join(', ').replace(/,([^,]*)$/, ' and$1')
+      : '<strong class="strong">your three FI inputs</strong>';
+    sub.innerHTML = `Open <strong class="strong">Settings</strong> and enter ${list} — the projection appears here.`;
     return;
   }
   hero.classList.remove('empty');
@@ -610,7 +697,12 @@ function openPanel() {
   document.getElementById('monthlySave').value = cfg.monthlySave || '';
   document.getElementById('netWorth').value = cfg.netWorth || '';
   document.getElementById('realReturn').value = cfg.realReturn || 7;
+  document.getElementById('ovIncome').value = cfg.ovIncome != null ? cfg.ovIncome : '';
+  document.getElementById('ovExpense').value = cfg.ovExpense != null ? cfg.ovExpense : '';
+  document.getElementById('ovTransfers').value = cfg.ovTransfers != null ? cfg.ovTransfers : '';
+  document.getElementById('ovNetSaved').value = cfg.ovNetSaved != null ? cfg.ovNetSaved : '';
   document.querySelectorAll('#unitSeg button').forEach(b => b.classList.toggle('active', b.dataset.v === cfg.unit));
+  document.querySelectorAll('#dataModeSeg button').forEach(b => b.classList.toggle('active', b.dataset.v === cfg.dataMode));
 }
 function closePanel() {
   document.getElementById('panelBg').classList.remove('open');
@@ -633,6 +725,13 @@ document.querySelectorAll('#unitSeg button').forEach(b => {
     cfg.unit = b.dataset.v;
   };
 });
+document.querySelectorAll('#dataModeSeg button').forEach(b => {
+  b.onclick = () => {
+    document.querySelectorAll('#dataModeSeg button').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    cfg.dataMode = b.dataset.v;
+  };
+});
 document.getElementById('saveSettings').onclick = () => {
   const profileNew = document.getElementById('profileInput').value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
   cfg.flavor = document.getElementById('fireFlavor').value;
@@ -641,6 +740,11 @@ document.getElementById('saveSettings').onclick = () => {
   cfg.monthlySave = parseFloat(document.getElementById('monthlySave').value) || null;
   cfg.netWorth = parseFloat(document.getElementById('netWorth').value) || null;
   cfg.realReturn = parseFloat(document.getElementById('realReturn').value) || 7;
+  const num = id => { const v = parseFloat(document.getElementById(id).value); return isNaN(v) ? null : v; };
+  cfg.ovIncome = num('ovIncome');
+  cfg.ovExpense = num('ovExpense');
+  cfg.ovTransfers = num('ovTransfers');
+  cfg.ovNetSaved = num('ovNetSaved');
   save('unit', cfg.unit);
   save('flavor', cfg.flavor);
   save('realWage', cfg.realWage);
@@ -648,6 +752,11 @@ document.getElementById('saveSettings').onclick = () => {
   save('monthlySave', cfg.monthlySave);
   save('netWorth', cfg.netWorth);
   save('realReturn', cfg.realReturn);
+  save('dataMode', cfg.dataMode);
+  save('ovIncome', cfg.ovIncome);
+  save('ovExpense', cfg.ovExpense);
+  save('ovTransfers', cfg.ovTransfers);
+  save('ovNetSaved', cfg.ovNetSaved);
   if (profileNew && profileNew !== PROFILE) {
     const url = new URL(location.href);
     url.searchParams.set('p', profileNew);
